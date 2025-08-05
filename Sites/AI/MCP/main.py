@@ -1,15 +1,37 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 import httpx
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import json
+import os
+import secrets
 
 app = FastAPI(
     title="Universal MCP Server",
     description="A universal tool/function handler for LLMs like Claude, ChatGPT, and platforms like n8n",
     version="1.0.0"
 )
+
+# Security setup
+security = HTTPBearer()
+API_KEYS = {
+    # Master key for all tools
+    "mcp_systemprompt_8k2j9x4m7n1q5w8e3r6t9y2u5i8o1p4s": {"name": "Master", "permissions": ["*"]},
+}
+
+def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    """Verify API key and return permissions"""
+    api_key = credentials.credentials
+    if api_key not in API_KEYS:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    return API_KEYS[api_key]
+
+def check_permission(tool_name: str, user_info: dict) -> bool:
+    """Check if user has permission for specific tool"""
+    permissions = user_info.get("permissions", [])
+    return "*" in permissions or tool_name in permissions
 
 # Add CORS middleware for cross-origin requests
 app.add_middleware(
@@ -32,6 +54,15 @@ class N8nRequest(BaseModel):
     data: Dict[str, Any] = {}
 
 class N8nResponse(BaseModel):
+    success: bool
+    data: Dict[str, Any]
+    message: str = ""
+
+class NotionRequest(BaseModel):
+    database_id: str
+    properties: Dict[str, Any] = {}
+
+class NotionResponse(BaseModel):
     success: bool
     data: Dict[str, Any]
     message: str = ""
@@ -80,6 +111,28 @@ TOOL_SCHEMAS = {
                 "required": ["workflow"]
             }
         }
+    },
+    "notion": {
+        "type": "function",
+        "function": {
+            "name": "notion",
+            "description": "Creates a new page in a Notion database (requires authentication)",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "database_id": {
+                        "type": "string",
+                        "description": "The ID of the Notion database to create a page in"
+                    },
+                    "properties": {
+                        "type": "object",
+                        "description": "The properties/content for the new Notion page",
+                        "additionalProperties": True
+                    }
+                },
+                "required": ["database_id", "properties"]
+            }
+        }
     }
 }
 
@@ -108,8 +161,11 @@ async def get_tool_schemas():
     }
 
 @app.post("/tools/hello", response_model=HelloResponse)
-async def hello_tool(request: HelloRequest):
+async def hello_tool(request: HelloRequest, user_info: dict = Depends(verify_api_key)):
     """Hello tool - greets a person by name"""
+    if not check_permission("hello", user_info):
+        raise HTTPException(status_code=403, detail="Insufficient permissions for hello tool")
+
     try:
         message = f"Hello, {request.name}!"
         return HelloResponse(message=message)
@@ -158,6 +214,53 @@ async def run_n8n_tool(request: N8nRequest):
             status_code=500, 
             detail=f"Error calling n8n webhook: {str(e)}"
         )
+
+@app.post("/tools/notion", response_model=NotionResponse)
+async def notion_tool(request: NotionRequest, user_info: dict = Depends(verify_api_key)):
+    """Notion tool - creates pages in Notion database (PROTECTED)"""
+    if not check_permission("notion", user_info):
+        raise HTTPException(status_code=403, detail="Insufficient permissions for Notion tool")
+
+    try:
+        # Get Notion API key from environment (secure)
+        notion_token = os.getenv("NOTION_API_KEY")
+        if not notion_token:
+            raise HTTPException(status_code=500, detail="Notion API key not configured")
+
+        # Call Notion API
+        headers = {
+            "Authorization": f"Bearer {notion_token}",
+            "Content-Type": "application/json",
+            "Notion-Version": "2022-06-28"
+        }
+
+        payload = {
+            "parent": {"database_id": request.database_id},
+            "properties": request.properties
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://api.notion.com/v1/pages",
+                headers=headers,
+                json=payload
+            )
+
+            if response.status_code == 200:
+                return NotionResponse(
+                    success=True,
+                    data=response.json(),
+                    message="Successfully created Notion page"
+                )
+            else:
+                return NotionResponse(
+                    success=False,
+                    data={"status_code": response.status_code, "response": response.text},
+                    message="Failed to create Notion page"
+                )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calling Notion API: {str(e)}")
 
 @app.get("/health")
 async def health_check():
