@@ -1,16 +1,12 @@
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-import httpx
-from typing import Dict, Any, List, Optional
-import json
-import os
-import secrets
+from typing import Dict, Any
 
 app = FastAPI(
     title="Universal MCP Server",
-    description="A universal tool/function handler for LLMs like Claude, ChatGPT, and platforms like n8n",
+    description="A universal tool/function handler for LLMs like Claude and ChatGPT",
     version="1.0.0"
 )
 
@@ -49,28 +45,6 @@ class HelloRequest(BaseModel):
 class HelloResponse(BaseModel):
     message: str
 
-class N8nRequest(BaseModel):
-    workflow: str
-    data: Dict[str, Any] = {}
-
-class N8nResponse(BaseModel):
-    success: bool
-    data: Dict[str, Any]
-    message: str = ""
-
-class NotionRequest(BaseModel):
-    database_id: str
-    properties: Dict[str, Any] = {}
-
-class NotionResponse(BaseModel):
-    success: bool
-    data: Dict[str, Any]
-    message: str = ""
-
-class ToolSchema(BaseModel):
-    type: str = "function"
-    function: Dict[str, Any]
-
 # Tool schemas for OpenAI/Claude compatibility
 TOOL_SCHEMAS = {
     "hello": {
@@ -87,50 +61,6 @@ TOOL_SCHEMAS = {
                     }
                 },
                 "required": ["name"]
-            }
-        }
-    },
-    "run_n8n": {
-        "type": "function",
-        "function": {
-            "name": "run_n8n",
-            "description": "Triggers an n8n workflow via webhook",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "workflow": {
-                        "type": "string",
-                        "description": "The name/identifier of the n8n workflow to trigger"
-                    },
-                    "data": {
-                        "type": "object",
-                        "description": "Optional data to send to the workflow",
-                        "additionalProperties": True
-                    }
-                },
-                "required": ["workflow"]
-            }
-        }
-    },
-    "notion": {
-        "type": "function",
-        "function": {
-            "name": "notion",
-            "description": "Creates a new page in a Notion database (requires authentication)",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "database_id": {
-                        "type": "string",
-                        "description": "The ID of the Notion database to create a page in"
-                    },
-                    "properties": {
-                        "type": "object",
-                        "description": "The properties/content for the new Notion page",
-                        "additionalProperties": True
-                    }
-                },
-                "required": ["database_id", "properties"]
             }
         }
     }
@@ -171,96 +101,6 @@ async def hello_tool(request: HelloRequest, user_info: dict = Depends(verify_api
         return HelloResponse(message=message)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing hello request: {str(e)}")
-
-@app.post("/tools/run_n8n", response_model=N8nResponse)
-async def run_n8n_tool(request: N8nRequest):
-    """N8n tool - triggers an n8n workflow via webhook"""
-    try:
-        # Construct the webhook URL
-        webhook_url = f"https://my-n8n-server/webhook/{request.workflow}"
-        
-        # Prepare the payload
-        payload = request.data if request.data else {}
-        
-        # Make the HTTP request to n8n webhook
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(webhook_url, json=payload)
-            
-            if response.status_code == 200:
-                try:
-                    response_data = response.json()
-                except json.JSONDecodeError:
-                    response_data = {"raw_response": response.text}
-                
-                return N8nResponse(
-                    success=True,
-                    data=response_data,
-                    message=f"Successfully triggered workflow: {request.workflow}"
-                )
-            else:
-                return N8nResponse(
-                    success=False,
-                    data={"status_code": response.status_code, "response": response.text},
-                    message=f"Failed to trigger workflow: {request.workflow}"
-                )
-                
-    except httpx.TimeoutException:
-        raise HTTPException(
-            status_code=408, 
-            detail=f"Timeout while calling n8n webhook for workflow: {request.workflow}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Error calling n8n webhook: {str(e)}"
-        )
-
-@app.post("/tools/notion", response_model=NotionResponse)
-async def notion_tool(request: NotionRequest, user_info: dict = Depends(verify_api_key)):
-    """Notion tool - creates pages in Notion database (PROTECTED)"""
-    if not check_permission("notion", user_info):
-        raise HTTPException(status_code=403, detail="Insufficient permissions for Notion tool")
-
-    try:
-        # Get Notion API key from environment (secure)
-        notion_token = os.getenv("NOTION_API_KEY")
-        if not notion_token:
-            raise HTTPException(status_code=500, detail="Notion API key not configured")
-
-        # Call Notion API
-        headers = {
-            "Authorization": f"Bearer {notion_token}",
-            "Content-Type": "application/json",
-            "Notion-Version": "2022-06-28"
-        }
-
-        payload = {
-            "parent": {"database_id": request.database_id},
-            "properties": request.properties
-        }
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                "https://api.notion.com/v1/pages",
-                headers=headers,
-                json=payload
-            )
-
-            if response.status_code == 200:
-                return NotionResponse(
-                    success=True,
-                    data=response.json(),
-                    message="Successfully created Notion page"
-                )
-            else:
-                return NotionResponse(
-                    success=False,
-                    data={"status_code": response.status_code, "response": response.text},
-                    message="Failed to create Notion page"
-                )
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error calling Notion API: {str(e)}")
 
 @app.get("/health")
 async def health_check():
