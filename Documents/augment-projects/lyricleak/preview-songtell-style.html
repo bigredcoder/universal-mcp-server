@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LyricLeak - Preview</title>
+  <link rel="icon" type="image/svg+xml" href="lyricleak_app_logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="lyricleak_app_logo_safe_32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="lyricleak_app_logo_safe_64.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="lyricleak_app_logo_safe_152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="lyricleak_app_logo_safe_180.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="lyricleak_app_logo_safe_256.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="lyricleak_app_logo_safe_512.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="LyricLeak">
+  <meta name="theme-color" content="#0b1024">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --primary: #ff6b4a;
+      --primary-hover: #ff4757;
+      --surface: rgba(255, 255, 255, 0.1);
+      --surface-hover: rgba(255, 255, 255, 0.15);
+      --text: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.7);
+      --background: linear-gradient(180deg, #0b1024 0%, #0c132c 55%, #0a0f20 100%);
+      --border: rgba(255, 255, 255, 0.2);
+      --shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      --radius: 12px;
+      --radius-lg: 20px;
+    }
+
+    body { font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .headline { font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .subtext { font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; font-weight: 400; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    const { useState, useEffect } = React;
+
+    const LyricLeak = () => {
+      const [song, setSong] = useState('');
+      const [artist, setArtist] = useState('');
+      const [isLoading, setIsLoading] = useState(false);
+      const [result, setResult] = useState(null);
+      const [showResult, setShowResult] = useState(false);
+      const [recentSearches, setRecentSearches] = useState([
+        'Yesterday — Beatles',
+        'Detroit Rock City — Kiss',
+        'Another Love — Tom Odell'
+      ]);
+      const demoPhrases = [
+        "Welcome to the Jungle — Guns N' Roses",
+        'Betterman — Pearl Jam',
+        'In the Air Tonight — Phil Collins',
+        'Yesterday — Beatles',
+        'Detroit Rock City — Kiss',
+        'American Pie — Don McLean'
+      ];
+      const [placeholder, setPlaceholder] = useState('');
+      const [isFocused, setIsFocused] = useState(false);
+
+      // Handle URL parameters
+      useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlSong = urlParams.get('song');
+        const urlArtist = urlParams.get('artist');
+
+        if (urlSong) {
+          setSong(urlSong);
+          if (urlArtist) setArtist(urlArtist);
+          setTimeout(() => handleSearch(), 500);
+        }
+      }, []);
+
+      // Typing animation for placeholder
+      useEffect(() => {
+        let i = 0;
+        let j = 0;
+        let deleting = false;
+        let active = demoPhrases[0] || '';
+        const tick = () => {
+          if (isFocused) return; // don't animate when typing
+          if (!deleting) {
+            setPlaceholder(active.slice(0, i + 1));
+            i++;
+            if (i >= active.length + 8) deleting = true; // pause at full
+          } else {
+            setPlaceholder(active.slice(0, Math.max(0, i - 1)));
+            i--;
+            if (i <= 0) {
+              deleting = false;
+              j = (j + 1) % demoPhrases.length;
+              active = demoPhrases[j];
+            }
+          }
+        };
+        const id = setInterval(tick, 65);
+        return () => clearInterval(id);
+      }, [isFocused]);
+
+      const parseQuery = (text) => {
+        const t = (text || '').trim();
+        if (!t) return { song: '', artist: '' };
+        const cleaned = t.replace(/[“”"']/g, '').replace(/[–—]/g, '-');
+        // pattern 1: song - artist
+        if (cleaned.includes(' - ')) {
+          const [s, a] = cleaned.split(' - ').map(x => x.trim());
+          return { song: s, artist: a };
+        }
+        // pattern 2: song by artist
+        const byIdx = cleaned.toLowerCase().lastIndexOf(' by ');
+        if (byIdx > 0) {
+          return { song: cleaned.slice(0, byIdx).trim(), artist: cleaned.slice(byIdx + 4).trim() };
+        }
+        return { song: cleaned, artist: '' };
+      };
+
+      const fetchSongMeaning = async (songTitle, artistName) => {
+        let url = 'https://ur74xqz788.execute-api.us-east-1.amazonaws.com/prod/api/meaning?song=' + encodeURIComponent(songTitle) + '';
+        if (artistName) {
+          url += '&artist=' + encodeURIComponent(artistName);
+        }
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("not_found");
+        const data = await res.json();
+
+        return data;
+      };
+
+      const handleSearch = async (overrideSong, overrideArtist) => {
+        const inputVal = (overrideSong != null ? overrideSong : song).trim();
+        if (!inputVal) return;
+
+        setIsLoading(true);
+        setShowResult(true);
+
+        // Analytics placeholder
+        // analytics.track('search_submitted', { song: inputVal, artist: (overrideArtist != null ? overrideArtist : artist) });
+
+        try {
+          let qs = inputVal;
+          let qa = (overrideArtist != null ? overrideArtist : '');
+          if (!overrideSong) {
+            const parsed = parseQuery(inputVal);
+            qs = (parsed.song ? parsed.song.trim() : '');
+            qa = ((parsed.artist != null ? parsed.artist : '')).trim();
+          }
+          const data = await fetchSongMeaning(qs, qa);
+
+          if (data.suggestion) {
+            setResult({
+              type: 'suggestion',
+              ...data
+            });
+          } else {
+            setResult({
+              type: 'meaning',
+              song: data.song,
+              artist: data.artist,
+              meaning: data.meaning
+            });
+
+            // Add to recent searches
+            const searchTerm = data.song + ' - ' + data.artist;
+            setRecentSearches(prev => [searchTerm, ...prev.filter(s => s !== searchTerm)].slice(0, 5));
+          }
+        } catch (error) {
+          setResult({
+            type: 'error',
+            message: 'Sorry, no songwriter meaning found. Try refining your search.'
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      const handleSuggestionAccept = (correctedSong, suggestedArtist) => {
+        // Avoid double state flips that cause choppy animation
+        setResult({ type: 'loading-suggestion' });
+        setSong(correctedSong);
+        setArtist(suggestedArtist);
+        requestAnimationFrame(() => {
+          handleSearch(correctedSong, suggestedArtist);
+        });
+      };
+
+      const shareResult = (songTitle, artistName) => {
+        const shareUrl = window.location.origin + '/?song=' + encodeURIComponent(songTitle) + '&artist=' + encodeURIComponent(artistName);
+        const title = songTitle + ' by ' + artistName + ' - Song Meaning';
+        const text = title + '\n' + shareUrl;
+
+        if (navigator.share) {
+          navigator.share({ title, text, url: shareUrl }).catch(()=>{
+            navigator.clipboard.writeText(text);
+            alert('Link copied to clipboard!');
+          });
+        } else {
+          navigator.clipboard.writeText(text);
+          alert('Link copied to clipboard!');
+        }
+      };
+
+      const LoadingAnimation = () => (
+        React.createElement('div', { className: "text-center py-12" },
+          // Moving EQ bars (brand colored)
+          React.createElement('div', { className: "mx-auto mb-6 flex items-end justify-center gap-1 h-10", 'aria-hidden': true },
+            [7,11,8,14,9].map((h,i)=>
+              React.createElement('span', {
+                key:i,
+                className: "w-1.5 bg-white/80 rounded-sm",
+                style:{
+                  height: (h * 2) + 'px',
+                  background: 'linear-gradient(180deg, var(--primary), var(--primary-hover))',
+                  animation: 'eq' + i + ' 900ms ease-in-out infinite alternate',
+                  display: 'inline-block'
+                }
+              })
+            )
+          ),
+
+          // Floating musical notes (replace dots)
+          React.createElement('div', { className: "relative mb-2 flex justify-center gap-3 text-2xl text-white/90" },
+            React.createElement('span', { className: "motion-safe:animate-bounce", style:{animationDelay:'0s'} }, '♪'),
+            React.createElement('span', { className: "motion-safe:animate-bounce", style:{animationDelay:'0.15s'} }, '♫'),
+            React.createElement('span', { className: "motion-safe:animate-bounce", style:{animationDelay:'0.3s'} }, '♪')
+          ),
+
+          React.createElement('p', { className: "text-lg", style: {color: 'var(--text-muted)'} }, 'Leaking the story behind the lyrics...')
+        )
+      );
+
+      // Keyframes for EQ bars
+      const styleEl = document.getElementById('eq-anim') || (()=>{ const s=document.createElement('style'); s.id='eq-anim'; s.textContent = '
+        @keyframes eq0 { 0%{transform:scaleY(.5)} 100%{transform:scaleY(1.2)} }
+        @keyframes eq1 { 0%{transform:scaleY(.8)} 100%{transform:scaleY(1.3)} }
+        @keyframes eq2 { 0%{transform:scaleY(.6)} 100%{transform:scaleY(1.4)} }
+        @keyframes eq3 { 0%{transform:scaleY(.7)} 100%{transform:scaleY(1.25)} }
+        @keyframes eq4 { 0%{transform:scaleY(.9)} 100%{transform:scaleY(1.35)} }
+      '; document.head.appendChild(s); return s; })();
+
+      return React.createElement('div', {
+        className: "min-h-screen text-white",
+        style: {background: 'var(--background)'}
+      },
+        // Header
+        React.createElement('header', {
+          className: "fixed top-0 left-0 right-0 z-50",
+          style: {background: 'transparent'}
+        },
+          React.createElement('div', { className: "px-0 md:px-0 py-4 flex items-center justify-between w-full" },
+            React.createElement('a', {
+              href: "/",
+              className: "flex items-center gap-3 text-2xl font-bold text-white no-underline",
+              style: {textDecoration: 'none', marginLeft: '50px'}
+            },
+              React.createElement('img', { src: 'lyricleak-logo.svg', alt: 'LyricLeak', className: "h-10 md:h-12 w-auto", loading: 'eager', decoding: 'async' })
+            ),
+
+          )
+        ),
+
+        // Main Content
+        React.createElement('main', { className: "pt-20" },
+          // Hero Section
+          React.createElement('section', { className: "text-center py-20 px-6" },
+            React.createElement('div', { className: "max-w-4xl mx-auto" },
+              React.createElement('h1', {
+                className: "headline text-5xl md:text-7xl leading-tight md:leading-[1.05] mb-6",
+                style: {
+                  background: 'linear-gradient(135deg, var(--primary), #ff8a80)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }
+              }, 'Every song has a secret.'),
+
+              React.createElement('p', {
+                className: "subtext text-xl md:text-2xl mb-12 leading-relaxed",
+                style: {color: 'var(--text-muted)'}
+              }, 'LyricLeak leaks the real stories and hidden meanings behind the music you love, using AI to dig deeper than the surface.'),
+
+
+
+                // Unified Search (single bar, no button)
+                React.createElement('form', { onSubmit: (e)=>{ e.preventDefault(); !isLoading && handleSearch(); } },
+                  React.createElement('div', { className: "flex items-center rounded-full border px-4 py-2", style:{borderColor:'var(--primary)', background:'rgba(255,255,255,0.06)', boxShadow:'none'} },
+                    React.createElement('input', {
+                      id: "song-input",
+                      type: "text",
+                      value: song,
+                      onChange: (e) => setSong(e.target.value),
+                      onFocus: ()=>setIsFocused(true),
+                      onBlur: ()=>setIsFocused(false),
+                      onKeyDown: (e) => e.key === 'Enter' && !isLoading && handleSearch(),
+                      placeholder: placeholder || '',
+                      className: "w-full bg-transparent px-1 py-3 text-white placeholder-white/60 focus:outline-none",
+                      autoComplete: "off",
+                      'aria-label': 'Search songs'
+                    }),
+                    React.createElement('button', { type:'submit', className:"ml-2 p-2 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] rounded-full", 'aria-label':'Search' },
+                      React.createElement('svg', { width:16, height:16, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:2 },
+                        React.createElement('circle', { cx:11, cy:11, r:7 }),
+                        React.createElement('line', { x1:21, y1:21, x2:16.65, y2:16.65 })
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          ),
+
+          // Results Section
+          showResult && React.createElement('section', { className: "px-6 pb-20" },
+            React.createElement('div', { className: "max-w-4xl mx-auto" },
+              React.createElement('div', {
+                className: "p-8 rounded-3xl border backdrop-blur-xl transition-all duration-500",
+                style: {background: 'var(--surface)', boxShadow: 'var(--shadow)', borderColor: 'var(--border)'}
+              },
+                isLoading ? React.createElement(LoadingAnimation) :
+                (result && result.type === 'suggestion') ? React.createElement('div', { className: "text-center py-8" },
+                  result.songChanged && React.createElement('div', { className: "mb-4 text-sm", style: {color: 'var(--text-muted)'} },
+                    React.createElement('em', null, 'Corrected spelling: "' + result.originalSong + '" -> "' + result.correctedSong + '"')
+                  ),
+                  React.createElement('div', { className: "mb-6 text-lg leading-relaxed" }, result.message),
+                  React.createElement('button', {
+                    onClick: () => handleSuggestionAccept(result.correctedSong, result.suggestedArtist),
+                    className: "px-8 py-3 rounded-xl font-semibold transition-all duration-200 hover:transform hover:-translate-y-1",
+                    style: {
+                      background: 'linear-gradient(135deg, var(--primary), var(--primary-hover))',
+                      boxShadow: '0 8px 20px rgba(255, 107, 74, 0.3)'
+                    }
+                  }, 'Yes, search for "' + result.correctedSong + '" by ' + result.suggestedArtist)
+                ) : (result && result.type === 'meaning') ? React.createElement('div', null,
+                  React.createElement('div', { className: "mb-6 pb-4 border-b", style: {borderColor: 'var(--border)'} },
+                    React.createElement('h2', { className: "text-2xl font-bold mb-2" },
+                      '"' + result.song + '" by ' + result.artist
+                    )
+                  ),
+
+                  React.createElement('div', { className: "mb-8" },
+                    React.createElement('div', {
+                      className: "text-base leading-relaxed whitespace-pre-wrap",
+                      style: { whiteSpace: 'pre-wrap' }
+                    }, result.meaning)
+                  ),
+
+                  // Share Button
+                  React.createElement('div', { className: "text-center pt-4 border-t", style: {borderColor: 'var(--border)'} },
+                    React.createElement('button', {
+                      onClick: () => shareResult(result.song, result.artist),
+                      className: "inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:transform hover:-translate-y-1",
+                      style: {
+                        background: 'var(--surface-hover)',
+                        boxShadow: '0 8px 20px rgba(255, 107, 74, 0.2)'
+                      }
+                    },
+                      React.createElement('svg', { width: "18", height: "18", viewBox: "0 0 24 24", fill: "currentColor" },
+                        React.createElement('circle', { cx: "18", cy: "5", r: "3" }),
+                        React.createElement('circle', { cx: "6", cy: "12", r: "3" }),
+                        React.createElement('circle', { cx: "18", cy: "19", r: "3" }),
+                        React.createElement('line', { x1: "8.59", y1: "13.51", x2: "15.42", y2: "17.49", stroke: "currentColor", strokeWidth: "2" }),
+                        React.createElement('line', { x1: "15.41", y1: "6.51", x2: "8.59", y2: "10.49", stroke: "currentColor", strokeWidth: "2" })
+                      ),
+                      'Share'
+                    )
+                  )
+                ) : React.createElement('div', { className: "text-center py-8", style: {color: 'var(--text-muted)'} },
+                  (result && result.message) || 'Sorry, no songwriter meaning found. Try refining your search.'
+                )
+              )
+            )
+          )
+        ),
+
+      );
+    };
+
+
+
+
+    const LoadingAnimation = () => (
+      React.createElement('div', { className: "text-center py-12" },
+        React.createElement('div', { className: "mx-auto mb-6 flex items-end justify-center gap-1 h-10", 'aria-hidden': true },
+          [7,11,8,14,9].map((h,i)=>
+            React.createElement('span', {
+              key:i,
+              className: "w-1.5 rounded-sm",
+              style:{
+                height: (h * 2) + 'px',
+                background: 'linear-gradient(180deg, var(--primary), var(--primary-hover))',
+                animation: 'eq' + i + ' 900ms ease-in-out infinite alternate',
+                display: 'inline-block'
+              }
+            })
+          )
+        ),
+        React.createElement('div', { className: "relative mb-2 flex justify-center gap-3 text-2xl text-white/90" },
+          React.createElement('span', { className: "motion-safe:animate-bounce", style:{animationDelay:'0s'} }, '♪'),
+          React.createElement('span', { className: "motion-safe:animate-bounce", style:{animationDelay:'0.15s'} }, '♫'),
+          React.createElement('span', { className: "motion-safe:animate-bounce", style:{animationDelay:'0.3s'} }, '♪')
+        ),
+        React.createElement('p', { className: "text-lg", style: {color: 'var(--text-muted)'} }, 'Leaking the story behind the lyrics...')
+      )
+    );
+
+    ReactDOM.render(React.createElement(LyricLeak), document.getElementById('root'));
+  </script>
+</body>
+</html>

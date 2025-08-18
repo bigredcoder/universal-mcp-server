@@ -1,0 +1,124 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'LyricLeak API - Simple Lambda + API Gateway'
+
+Parameters:
+  LambdaBucket:
+    Type: String
+    Description: S3 bucket containing the Lambda function code
+  LambdaKey:
+    Type: String
+    Default: lambda-function.zip
+    Description: S3 key for the Lambda function code
+  OpenAIApiKey:
+    Type: String
+    NoEcho: true
+    Description: OpenAI API Key for the smart agent
+
+Resources:
+  # IAM Role for Lambda
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # Lambda Function
+  LyricLeakFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: lyricleak-api
+      Runtime: nodejs20.x
+      Handler: server.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: !Ref LambdaKey
+      Environment:
+        Variables:
+          OPENAI_API_KEY: !Ref OpenAIApiKey
+          NODE_ENV: production
+      Timeout: 30
+      MemorySize: 512
+
+  # API Gateway
+  LyricLeakApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: lyricleak-api
+      Description: LyricLeak API Gateway
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # Lambda Permission for API Gateway
+  LambdaApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LyricLeakFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LyricLeakApi}/*/*'
+
+  # Proxy Resource (catches all paths)
+  ProxyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref LyricLeakApi
+      ParentId: !GetAtt LyricLeakApi.RootResourceId
+      PathPart: '{proxy+}'
+
+  # Proxy Method (handles all HTTP methods)
+  ProxyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref LyricLeakApi
+      ResourceId: !Ref ProxyResource
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LyricLeakFunction.Arn}/invocations'
+
+  # Root Method (handles requests to the root path)
+  RootMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref LyricLeakApi
+      ResourceId: !GetAtt LyricLeakApi.RootResourceId
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LyricLeakFunction.Arn}/invocations'
+
+  # API Gateway Deployment
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ProxyMethod
+      - RootMethod
+    Properties:
+      RestApiId: !Ref LyricLeakApi
+      StageName: prod
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway URL
+    Value: !Sub 'https://${LyricLeakApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+  
+  LambdaFunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt LyricLeakFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-LambdaArn'

@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lyric Leak</title>
+  <link rel="icon" type="image/svg+xml" href="lyricleak_app_logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="lyricleak_app_logo_safe_32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="lyricleak_app_logo_safe_64.png">
+  <!-- Apple touch icons -->
+  <!-- Generic Apple icon for iOS caching quirks (no sizes) -->
+  <link rel="apple-touch-icon" href="lyricleak_eq_icon_centered_math_180.png?v=2">
+  <link rel="apple-touch-icon-precomposed" href="lyricleak_eq_icon_centered_math_180.png?v=2">
+
+  <link rel="apple-touch-icon" sizes="60x60" href="lyricleak_eq_icon_centered_math_60.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="lyricleak_eq_icon_centered_math_76.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="lyricleak_eq_icon_centered_math_120.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="lyricleak_eq_icon_centered_math_152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="lyricleak_eq_icon_centered_math_180.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="lyricleak_eq_icon_centered_math_512.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Lyric Leak">
+  <meta name="theme-color" content="#0b1024">
+  <link rel="manifest" href="/manifest.json?v=2">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --primary: #ff6b4a;
+      --primary-hover: #ff4757;
+      --surface: rgba(255, 255, 255, 0.1);
+      --surface-hover: rgba(255, 255, 255, 0.15);
+      --text: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.7);
+      --background: linear-gradient(180deg, #0b1024 0%, #0c132c 55%, #0a0f20 100%);
+      --border: rgba(255, 255, 255, 0.2);
+      --shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      --radius: 12px;
+      --radius-lg: 20px;
+    }
+
+    body { font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .headline { font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .subtext { font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; font-weight: 400; }
+
+    @media (prefers-reduced-motion: reduce) {
+      /* Keep essential loading animations; only minimize decorative transitions */
+      *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Smooth in-card transitions (softer, slower) */
+    .fade-in { animation: fadeIn 320ms ease-out both; }
+    .slide-fade-in { animation: slideFadeIn 360ms ease-out both; will-change: transform, opacity; }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes slideFadeIn { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
+    /* Prevent layout shift when scrollbar appears */
+    html { scrollbar-gutter: stable both-edges; }
+    body { overflow-y: scroll; }
+
+    /* Custom range slider styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 999px;
+      background: #4a5568;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      vertical-align: middle;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ef4444;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: #dc2626;
+      transform: scale(1.1);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ef4444;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-moz-range-thumb:hover {
+      background: #dc2626;
+      transform: scale(1.1);
+    }
+
+    /* Mobile-ready audio controls */
+    .audio-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 8px 0;
+      flex-wrap: wrap;
+    }
+
+    @media (min-width: 768px) {
+      .audio-controls {
+        gap: 12px;
+        min-height: 40px;
+        flex-wrap: nowrap;
+      }
+    }
+
+    .play-pause-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #ef4444;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .play-pause-btn:hover {
+      background: #dc2626;
+      transform: scale(1.05);
+    }
+
+    .play-pause-btn:disabled {
+      background: #6b7280;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .play-pause-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: white;
+    }
+
+    .timeline-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      min-height: 24px;
+      min-width: 0;
+    }
+
+    .time-display {
+      font-size: 12px;
+      min-width: 35px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    @media (min-width: 768px) {
+      .time-display {
+        font-size: 14px;
+        min-width: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    function LyricLeak() {
+      var songState = React.useState('');
+      var song = songState[0];
+      var setSong = songState[1];
+
+      var isLoadingState = React.useState(false);
+      var isLoading = isLoadingState[0];
+      var setIsLoading = isLoadingState[1];
+
+      var resultState = React.useState(null);
+      var result = resultState[0];
+      var setResult = resultState[1];
+
+      var showResultState = React.useState(false);
+      var showResult = showResultState[0];
+      var setShowResult = showResultState[1];
+
+      var placeholderState = React.useState('');
+      var placeholder = placeholderState[0];
+      var setPlaceholder = placeholderState[1];
+
+      // Track mobile breakpoint for header background
+      var isMobileState = React.useState(false);
+      var isMobile = isMobileState[0];
+      var setIsMobile = isMobileState[1];
+      React.useEffect(function() {
+        function update() {
+          try { setIsMobile(window.matchMedia('(max-width: 768px)').matches); } catch(e) { setIsMobile(window.innerWidth <= 768); }
+        }
+        update();
+        window.addEventListener('resize', update);
+        return function(){ window.removeEventListener('resize', update); };
+      }, []);
+
+
+	      // On mount: if URL has ?song=&artist=, auto-run search and reveal results
+	      React.useEffect(function() {
+	        try {
+	          var params = new URLSearchParams(window.location.search);
+	          var qs = (params.get('song') || '').trim();
+	          var qa = (params.get('artist') || '').trim();
+	          if (qs) {
+	            var inputStr = qa ? (qs + ' - ' + qa) : qs;
+	            setSong(inputStr);
+	            setPlaceholder('');
+	            setShowResult(true);
+	            // Delay a tick to ensure state applied before search
+	            setTimeout(function(){ handleSearch(qs, qa); }, 0);
+	          }
+	        } catch(e) {}
+	      }, []);
+
+
+      var isFocusedState = React.useState(false);
+      var isFocused = isFocusedState[0];
+      var setIsFocused = isFocusedState[1];
+
+
+	      // Track the active API request to cancel/ignore stale responses
+	      var requestRef = React.useRef({ id: 0, controller: null });
+
+      var demoPhrases = [
+        "Welcome to the Jungle — GNR",
+        'Betterman — Pearl Jam',
+        'In the Air Tonight — Phil Collins',
+        'Yesterday — Beatles',
+        'Detroit Rock City — Kiss',
+        'American Pie — Don McLean'
+      ];
+
+      // Curated list of songs with compelling stories for "Surprise me"
+      var surpriseSongs = [
+        { song: "Detroit Rock City", artist: "Kiss" },
+        { song: "Jeremy", artist: "Pearl Jam" },
+        { song: "American Pie", artist: "Don McLean" },
+        { song: "The Night the Lights Went Out in Georgia", artist: "Vicki Lawrence" },
+        { song: "Tears in Heaven", artist: "Eric Clapton" },
+        { song: "Hurt", artist: "Johnny Cash" },
+        { song: "Mad World", artist: "Gary Jules" },
+        { song: "Black", artist: "Pearl Jam" },
+        { song: "Alive", artist: "Pearl Jam" },
+        { song: "Rooster", artist: "Alice in Chains" },
+        { song: "One", artist: "Metallica" },
+        { song: "Zombie", artist: "The Cranberries" },
+        { song: "Sunday Bloody Sunday", artist: "U2" },
+        { song: "The Man in Black", artist: "Johnny Cash" },
+        { song: "Fast Car", artist: "Tracy Chapman" },
+        { song: "Hallelujah", artist: "Leonard Cohen" },
+        { song: "Hurt", artist: "Nine Inch Nails" },
+        { song: "Creep", artist: "Radiohead" },
+        { song: "Everybody Hurts", artist: "R.E.M." },
+        { song: "Losing My Religion", artist: "R.E.M." }
+      ];
+
+      function handleSurpriseMe() {
+        if (isLoading) return;
+        var randomSong = surpriseSongs[Math.floor(Math.random() * surpriseSongs.length)];
+        var inputStr = randomSong.song + ' - ' + randomSong.artist;
+        setSong(inputStr);
+        setPlaceholder('');
+        handleSearch(randomSong.song, randomSong.artist);
+      }
+
+      // YouTube embed with actual player
+      var youtubePlayerState = React.useState({ videoId: null, loading: false });
+      var youtubePlayer = youtubePlayerState[0];
+      var setYoutubePlayer = youtubePlayerState[1];
+
+      // Video ID mapping with fallback alternatives
+      function getVideoIdFromQuery(song, artist) {
+        var songKey = (song + ' ' + artist).toLowerCase();
+        var videoMap = {
+          'detroit rock city kiss': ['iZq3i94mSsQ', 'swBYAVLNpQo'],
+          'jeremy pearl jam': [],
+          'american pie don mclean': ['uAsV5-Hv-7U', 'iX_TFkut1PM'],
+          'tears in heaven eric clapton': ['JxPj3GAYYZ0', 'R7f189Z0v0Y'],
+          'hurt johnny cash': ['8AHCfZTRGiI', 'vt1Pwfnh5pc'],
+          'alive pearl jam': ['wGiTPgvKktM', 'qM0zINtulhM'],
+          'black pearl jam': ['cs-XZ_dN4Hc', '5ChbxMVgGV4'],
+          'one metallica': ['WM8bTdBs-cw', 'sXPkmIwmEHs'],
+          'zombie the cranberries': ['6Ejga4kJUts', 'lBJVQnl_HVs'],
+          'sunday bloody sunday u2': ['CkeDjLZMRRk', 'EM4vblG6BVQ', 'LQZLPV6xPCA'],
+          'fast car tracy chapman': [],
+          'hallelujah leonard cohen': ['ttEMYvpoR-k', 'YrLk4vdY28Q'],
+          'creep radiohead': ['XFkzRNyygfk', '4XaDeC2LEdA'],
+          'everybody hurts r.e.m.': ['5rOiW_xY-kc', 'ijZRCIrTgQc'],
+          'losing my religion r.e.m.': ['xwtdhWltSIg', '1GdTiTjiXEI'],
+          'mad world gary jules': [],
+          'rooster alice in chains': ['uAE6Il6OTcs', 'x_5iF2xNBKg'],
+          'welcome to the jungle gnr': ['o1tj2zJ2Wvg', '2N1TJP1cxmo'],
+          'welcome to the jungle guns n\' roses': ['o1tj2zJ2Wvg', '2N1TJP1cxmo'],
+          'betterman pearl jam': ['hbpUfWz-rlc', 'YxIiPLVR6NA'],
+          'in the air tonight phil collins': ['YkADj0TPrJA', 'MN3x-kAbgFU'],
+          'yesterday beatles': ['wXTJBr9tt8Q', 'NrgmdVjpVws']
+        };
+
+        var videoIds = videoMap[songKey];
+        return videoIds ? videoIds[0] : null;
+      }
+
+      // Get fallback video IDs for a song
+      function getFallbackVideoIds(song, artist) {
+        var songKey = (song + ' ' + artist).toLowerCase();
+        var videoMap = {
+          'detroit rock city kiss': ['iZq3i94mSsQ', 'swBYAVLNpQo'],
+          'jeremy pearl jam': [],
+          'american pie don mclean': ['uAsV5-Hv-7U', 'iX_TFkut1PM'],
+          'tears in heaven eric clapton': ['JxPj3GAYYZ0', 'R7f189Z0v0Y'],
+          'hurt johnny cash': ['8AHCfZTRGiI', 'vt1Pwfnh5pc'],
+          'alive pearl jam': ['wGiTPgvKktM', 'qM0zINtulhM'],
+          'black pearl jam': ['cs-XZ_dN4Hc', '5ChbxMVgGV4'],
+          'one metallica': ['WM8bTdBs-cw', 'sXPkmIwmEHs'],
+          'zombie the cranberries': ['6Ejga4kJUts', 'lBJVQnl_HVs'],
+          'sunday bloody sunday u2': ['CkeDjLZMRRk', 'EM4vblG6BVQ', 'LQZLPV6xPCA'],
+          'fast car tracy chapman': [],
+          'hallelujah leonard cohen': ['ttEMYvpoR-k', 'YrLk4vdY28Q'],
+          'creep radiohead': ['XFkzRNyygfk', '4XaDeC2LEdA'],
+          'everybody hurts r.e.m.': ['5rOiW_xY-kc', 'ijZRCIrTgQc'],
+          'losing my religion r.e.m.': ['xwtdhWltSIg', '1GdTiTjiXEI'],
+          'mad world gary jules': [],
+          'rooster alice in chains': ['uAE6Il6OTcs', 'x_5iF2xNBKg'],
+          'welcome to the jungle gnr': ['o1tj2zJ2Wvg', '2N1TJP1cxmo'],
+          'welcome to the jungle guns n\' roses': ['o1tj2zJ2Wvg', '2N1TJP1cxmo'],
+          'betterman pearl jam': ['hbpUfWz-rlc', 'YxIiPLVR6NA'],
+          'in the air tonight phil collins': ['YkADj0TPrJA', 'MN3x-kAbgFU'],
+          'yesterday beatles': ['wXTJBr9tt8Q', 'NrgmdVjpVws']
+        };
+
+        return videoMap[songKey] || [];
+      }
+
+
+
+
+
+
+
+      function createYouTubeEmbed(song, artist) {
+        var videoId = getVideoIdFromQuery(song, artist);
+
+
+
+        if (!videoId) {
+          return React.createElement('div', {
+            className: "mb-4"
+          },
+            React.createElement('div', {
+              className: "bg-gray-800 rounded-lg p-4",
+              style: { minHeight: '120px' }
+            },
+              React.createElement('div', { className: "audio-controls mb-3" },
+                React.createElement('div', {
+                  id: 'audio-player-' + (song + ' ' + artist).replace(/[^a-zA-Z0-9]/g, ''),
+                  style: { position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }
+                }),
+                React.createElement('button', {
+                  id: 'play-pause-btn-' + (song + ' ' + artist).replace(/[^a-zA-Z0-9]/g, ''),
+                  className: "play-pause-btn",
+                  onClick: function() {
+                    var playerId = 'audio-player-' + (song + ' ' + artist).replace(/[^a-zA-Z0-9]/g, '');
+                    var btnId = 'play-pause-btn-' + (song + ' ' + artist).replace(/[^a-zA-Z0-9]/g, '');
+                    window.toggleAudioPlayer(playerId, btnId, song + ' ' + artist);
+                  }
+                },
+                  React.createElement('svg', {
+                    id: 'play-icon-' + (song + ' ' + artist).replace(/[^a-zA-Z0-9]/g, ''),
+                    viewBox: '0 0 24 24',
+                    style: { display: 'block' }
+                  },
+                    React.createElement('path', {
+                      d: 'M8 5v14l11-7z'
+                    })
+                  ),
+                  React.createElement('svg', {
+                    id: 'pause-icon-' + (song + ' ' + artist).replace(/[^a-zA-Z0-9]/g, ''),
+                    viewBox: '0 0 24 24',
+                    style: { display: 'none' }
+                  },
+                    React.createElement('path', {
+                      d: 'M6 19h4V5H6v14zm8-14v14h4V5h-4z'
+                    })
+                  )
+                ),
+                React.createElement('span', {
+                  id: 'current-time-' + (song + ' ' + artist).replace(/[^a-zA-Z0-9]/g, ''),
+                  className: "text-white time-display"
+                }, '0:00'),
+                React.createElement('div', { className: "timeline-container" },
+                  React.createElement('input', {
+                    id: 'seek-' + (song + ' ' + artist).replace(/[^a-zA-Z0-9]/g, ''),
+                    type: 'range',
+                    min: '0',
+                    max: '1000',
+                    value: '0',
+                    className: 'w-full',
+                    onChange: function(e) {
+                      var playerId = 'audio-player-' + (song + ' ' + artist).replace(/[^a-zA-Z0-9]/g, '');
+                      var player = window.audioPlayers[playerId];
+                      if (player && player.seekTo) {
+                        var duration = player.getDuration();
+                        var seekTime = (e.target.value / 1000) * duration;
+                        player.seekTo(seekTime);
+                      }
+                    }
+                  })
+                ),
+                React.createElement('span', {
+                  id: 'duration-' + (song + ' ' + artist).replace(/[^a-zA-Z0-9]/g, ''),
+                  className: "text-white time-display"
+                }, '0:00')
+              ),
+              React.createElement('div', { className: "text-white" },
+                React.createElement('div', { className: "font-medium" }, song),
+                React.createElement('div', { className: "text-sm text-gray-400" }, artist)
+              )
+            )
+          );
+        }
+
+
+
+        return React.createElement('div', {
+          className: "mb-4 rounded-xl overflow-hidden border",
+          style: {
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderColor: 'rgba(255, 255, 255, 0.1)'
+          }
+        },
+          React.createElement('div', { className: "p-3 border-b", style: { borderColor: 'rgba(255, 255, 255, 0.1)' } },
+            React.createElement('div', { className: "flex items-center justify-between" },
+              React.createElement('div', { className: "flex items-center gap-3" },
+                React.createElement('div', {
+                  className: "w-8 h-8 rounded-lg flex items-center justify-center",
+                  style: { background: '#ff0000' }
+                },
+                  React.createElement('svg', {
+                    width: "16",
+                    height: "11",
+                    viewBox: "0 0 20 14",
+                    fill: "white"
+                  },
+                    React.createElement('path', {
+                      d: "M19.582 2.186c-.23-.86-.908-1.538-1.768-1.768C16.254 0 10 0 10 0S3.746 0 2.186.418c-.86.23-1.538.908-1.768 1.768C0 3.746 0 7 0 7s0 3.254.418 4.814c.23.86.908 1.538 1.768 1.768C3.746 14 10 14 10 14s6.254 0 7.814-.418c.86-.23 1.538-.908 1.768-1.768C20 10.254 20 7 20 7s0-3.254-.418-4.814zM8 10V4l5.196 3L8 10z"
+                    })
+                  )
+                ),
+                React.createElement('div', null,
+                  React.createElement('div', {
+                    className: "text-sm font-medium text-white"
+                  }, song + ' by ' + artist),
+                  React.createElement('div', {
+                    className: "text-xs opacity-70"
+                  }, 'Official Music Video')
+                )
+              ),
+              null
+            )
+          ),
+          React.createElement('div', { className: "aspect-video" },
+            React.createElement('iframe', {
+              width: "100%",
+              height: "100%",
+              src: 'https://www.youtube.com/embed/' + videoId + '?rel=0&modestbranding=1',
+              title: song + ' by ' + artist,
+              frameBorder: "0",
+              allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
+              allowFullScreen: true,
+              style: { border: 'none' }
+            })
+          )
+        );
+      }
+
+      // Typing animation for placeholder (pause during loading/results to avoid jank)
+      React.useEffect(function() {
+        // Pause animation while input is focused, results visible, or loading
+        if (isFocused || isLoading || showResult) {
+          return function() {};
+        }
+        var i = 0;
+        var j = 0;
+        var deleting = false;
+        var active = demoPhrases[0] || '';
+        function tick() {
+          if (!deleting) {
+            setPlaceholder(active.slice(0, i + 1));
+            i++;
+            if (i >= active.length + 8) deleting = true;
+          } else {
+            setPlaceholder(active.slice(0, Math.max(0, i - 1)));
+            i--;
+            if (i <= 0) {
+              deleting = false;
+              j = (j + 1) % demoPhrases.length;
+              active = demoPhrases[j];
+            }
+          }
+
+
+
+        }
+        var id = setInterval(tick, 65);
+        return function() { clearInterval(id); };
+      }, [isFocused, isLoading, showResult]);
+
+      function parseQuery(text) {
+        var t = (text || '').trim();
+        if (!t) return { song: '', artist: '' };
+        var cleaned = t.replace(/["""']/g, '').replace(/[–—]/g, '-');
+        if (cleaned.indexOf(' - ') !== -1) {
+          var parts = cleaned.split(' - ');
+          return { song: parts[0].trim(), artist: parts[1].trim() };
+        }
+        var byIdx = cleaned.toLowerCase().lastIndexOf(' by ');
+        if (byIdx > 0) {
+          return { song: cleaned.slice(0, byIdx).trim(), artist: cleaned.slice(byIdx + 4).trim() };
+        }
+        return { song: cleaned, artist: '' };
+      }
+
+      function fetchSongMeaning(songTitle, artistName) {
+        // Increment request id and abort any in-flight request so stale responses are ignored
+        try { if (requestRef.current.controller) { requestRef.current.controller.abort(); } } catch(e) {}
+        var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var rid = (requestRef.current.id || 0) + 1;
+        requestRef.current = { id: rid, controller: controller };
+
+        var url = 'https://ur74xqz788.execute-api.us-east-1.amazonaws.com/prod/api/meaning?song=' + encodeURIComponent(songTitle);
+        if (artistName) {
+          url += '&artist=' + encodeURIComponent(artistName);
+        }
+        return fetch(url, controller ? { signal: controller.signal } : undefined).then(function(res) {
+          if (!res.ok) throw new Error("not_found");
+          return res.json();
+        }).then(function(json){
+          // Ignore if a newer request was started
+          if (requestRef.current.id !== rid) { return Promise.reject(new Error('stale')); }
+          return json;
+        });
+      }
+
+      function handleSearch(overrideSong, overrideArtist) {
+        var inputVal = (overrideSong != null ? overrideSong : song).trim();
+        if (!inputVal) return;
+
+        // Hard reset all UI state before new search
+        setSong(inputVal);
+        setResult(null);
+        setIsLoading(true);
+        setShowResult(true);
+
+        var parsed = parseQuery(inputVal);
+        var searchSong = overrideSong || parsed.song;
+        var searchArtist = overrideArtist || parsed.artist;
+
+        fetchSongMeaning(searchSong, searchArtist).then(function(data) {
+          if (data.suggestion) {
+            setResult({
+              type: 'suggestion',
+              originalSong: data.originalSong,
+              correctedSong: data.correctedSong,
+              suggestedArtist: data.suggestedArtist,
+              songChanged: data.songChanged,
+              message: data.message
+            });
+          } else if (data.meaning) {
+            setResult({
+              type: 'meaning',
+              song: data.song,
+              artist: data.artist,
+              meaning: data.meaning
+            });
+          }
+          setIsLoading(false);
+        }).catch(function(error) {
+          if (error && error.message === 'stale') { return; }
+          setResult({
+            type: 'error',
+            message: 'Sorry, no songwriter meaning found. Try refining your search.'
+          });
+          setIsLoading(false);
+        });
+      }
+
+      function handleSuggestionAccept(correctedSong, suggestedArtist) {
+        // Update the search input to show what we're searching for
+        setSong(correctedSong + ' - ' + suggestedArtist);
+
+        // Ensure results panel is visible
+        setShowResult(true);
+
+        // Immediately set to loading state to clear the suggestion
+        setResult({ type: 'loading' });
+        setIsLoading(true);
+
+
+        // Then do the search
+        var parsed = parseQuery(correctedSong + ' - ' + suggestedArtist);
+        var searchSong = correctedSong;
+        var searchArtist = suggestedArtist;
+
+        fetchSongMeaning(searchSong, searchArtist).then(function(data) {
+          if (data.suggestion) {
+            setResult({
+              type: 'suggestion',
+              originalSong: data.originalSong,
+              correctedSong: data.correctedSong,
+              suggestedArtist: data.suggestedArtist,
+              songChanged: data.songChanged,
+              message: data.message
+            });
+          } else if (data.meaning) {
+            setResult({
+              type: 'meaning',
+              song: data.song,
+              artist: data.artist,
+              meaning: data.meaning
+            });
+          }
+          setIsLoading(false);
+        }).catch(function(error) {
+          setResult({
+            type: 'error',
+            message: 'Sorry, no songwriter meaning found. Try refining your search.'
+          });
+          setIsLoading(false);
+        });
+      }
+
+      function shareResult(songTitle, artistName) {
+        var shareUrl = window.location.origin + '/?song=' + encodeURIComponent(songTitle) + '&artist=' + encodeURIComponent(artistName);
+        var title = songTitle + ' by ' + artistName + ' - Song Meaning';
+
+        if (navigator.share) {
+          navigator.share({ title: title, url: shareUrl }).catch(function() {
+            navigator.clipboard.writeText(shareUrl);
+            alert('Link copied to clipboard!');
+          });
+        } else {
+          navigator.clipboard.writeText(shareUrl);
+          alert('Link copied to clipboard!');
+        }
+      }
+
+      function LoadingAnimation() {
+        return React.createElement('div', { className: "text-center py-12" },
+          React.createElement('div', { className: "mx-auto mb-6 flex items-end justify-center gap-1 h-10" },
+            [7,11,8,14,9].map(function(h, i) {
+              return React.createElement('span', {
+                key: i,
+                className: "w-1.5 rounded-sm",
+                style: {
+                  height: (h * 2) + 'px',
+                  background: 'linear-gradient(180deg, var(--primary), var(--primary-hover))',
+                  animation: 'eq' + i + ' 900ms ease-in-out infinite alternate',
+                  display: 'inline-block',
+                  transformOrigin: 'bottom',
+                  willChange: 'transform'
+                }
+              });
+            })
+          ),
+          React.createElement('div', { className: "relative mb-2 flex justify-center gap-3 text-2xl text-white/90" },
+            React.createElement('span', { style: {display: 'inline-block', animation: 'llBounce 1.3s ease-in-out infinite', animationDelay: '0s'} }, '♪'),
+            React.createElement('span', { style: {display: 'inline-block', animation: 'llBounce 1.3s ease-in-out infinite', animationDelay: '0.15s'} }, '♫'),
+            React.createElement('span', { style: {display: 'inline-block', animation: 'llBounce 1.3s ease-in-out infinite', animationDelay: '0.3s'} }, '♪')
+          ),
+          React.createElement('p', { className: "text-lg", style: {color: 'var(--text-muted)'} }, 'Leaking the story behind the lyrics...')
+        );
+      }
+
+      // Add keyframes for EQ bars
+      if (!document.getElementById('eq-anim')) {
+        var style = document.createElement('style');
+        style.id = 'eq-anim';
+        style.textContent = '@keyframes eq0 { 0%{transform:scaleY(.5)} 100%{transform:scaleY(1.2)} } @keyframes eq1 { 0%{transform:scaleY(.8)} 100%{transform:scaleY(1.3)} } @keyframes eq2 { 0%{transform:scaleY(.6)} 100%{transform:scaleY(1.4)} } @keyframes eq3 { 0%{transform:scaleY(.7)} 100%{transform:scaleY(1.25)} } @keyframes eq4 { 0%{transform:scaleY(.9)} 100%{transform:scaleY(1.35)} }';
+        document.head.appendChild(style);
+      }
+
+      // Add bounce keyframes for mobile-safe loading notes
+      if (!document.getElementById('ll-bounce')) {
+        var s2 = document.createElement('style');
+        s2.id = 'll-bounce';
+        s2.textContent = '@keyframes llBounce { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }';
+        document.head.appendChild(s2);
+      }
+
+
+      return React.createElement('div', {
+        className: "min-h-screen text-white",
+        style: {background: 'var(--background)'}
+      },
+        React.createElement('header', {
+          className: "fixed top-0 left-0 right-0 z-50",
+          style: {background: isMobile ? '#0b1024' : 'transparent', boxShadow: 'none', borderBottom: 'none', backdropFilter: 'none', WebkitBackdropFilter: 'none', filter: 'none'}
+        },
+          React.createElement('div', { className: "px-4 md:px-6 md:pl-12 py-3 flex items-center w-full justify-center md:justify-start" },
+            React.createElement('a', {
+              href: "/",
+              className: "flex items-center gap-3 text-2xl font-bold text-white no-underline mx-auto md:mx-0",
+              style: {textDecoration: 'none'}
+            },
+              React.createElement('img', { src: 'lyricleak-logo.svg', alt: 'Lyric Leak', className: "h-8 md:h-10 w-auto", loading: 'eager', decoding: 'async' })
+            )
+          )
+        ),
+
+        React.createElement('main', { className: "pt-20 md:pt-24" },
+          React.createElement('section', { className: "text-center pt-16 md:pt-20 pb-8 md:pb-10 px-6" },
+            React.createElement('div', { className: "max-w-4xl mx-auto" },
+              React.createElement('h1', {
+                className: "headline text-[34px] leading-tight md:text-6xl md:leading-[1.1] mb-3",
+                style: {
+                  background: 'linear-gradient(135deg, var(--primary), #ff8a80)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  lineHeight: '1.1'
+                }
+              }, 'Every song has a secret.'),
+
+              React.createElement('p', {
+                className: "subtext text-base md:text-2xl mb-6 leading-relaxed",
+                style: {color: 'var(--text-muted)'}
+              }, 'Lyric Leak leaks the real stories and hidden meanings behind the music you love, using AI to dig deeper than the surface.'),
+
+              React.createElement('form', {
+                onSubmit: function(e) {
+                  e.preventDefault();
+                  if (!isLoading) handleSearch();
+                  var inp = document.getElementById('song-input'); if (inp) inp.blur();
+                  window.scrollTo({ top: window.pageYOffset, behavior: 'auto' });
+                }
+              },
+                React.createElement('div', {
+                  className: "flex items-center rounded-full border px-3 py-2 max-w-xl mx-auto",
+                  style: {borderColor: 'var(--primary)', background: 'rgba(255,255,255,0.06)', boxShadow: 'none'}
+                },
+                  React.createElement('input', {
+                    id: "song-input",
+                    type: "search",
+                    enterKeyHint: "search",
+                    autoCapitalize: "none",
+                    autoCorrect: "off",
+                    inputMode: "text",
+                    value: song,
+                    onChange: function(e) { setSong(e.target.value); setPlaceholder(''); setResult(null); setShowResult(false); setIsLoading(false); try { if (requestRef.current.controller) { requestRef.current.controller.abort(); } } catch(_) {} },
+                    onFocus: function() { setIsFocused(true); setSong(''); setPlaceholder(''); setResult(null); setShowResult(false); setIsLoading(false); try { if (requestRef.current.controller) { requestRef.current.controller.abort(); } } catch(_) {} },
+                    onBlur: function() { setIsFocused(false); },
+                    onKeyDown: function(e) { if ((e.key === 'Enter' || e.key === 'Go') && !isLoading) { e.preventDefault(); handleSearch(); e.currentTarget.blur(); } },
+                    placeholder: placeholder || '',
+                    className: "w-full bg-transparent px-1 py-2 text-base md:text-lg text-white placeholder-white/60 focus:outline-none",
+                    autoComplete: "off"
+                  }),
+                  React.createElement('button', {
+                    type: 'submit',
+                    className: "ml-2 p-2 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] rounded-full"
+                  },
+                    React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
+                      React.createElement('circle', { cx: 11, cy: 11, r: 7 }),
+                      React.createElement('line', { x1: 21, y1: 21, x2: 16.65, y2: 16.65 })
+                    )
+                  )
+                )
+              ),
+
+              React.createElement('div', { className: "text-center mt-4" },
+                React.createElement('button', {
+                  onClick: handleSurpriseMe,
+                  disabled: isLoading,
+                  className: "inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 hover:transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed",
+                  style: {
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: 'rgba(255, 255, 255, 0.8)'
+                  }
+                },
+                  React.createElement('span', { style: { fontSize: '14px' } }, '🎲'),
+                  'Surprise me'
+                )
+              )
+            )
+              , React.createElement('style', null, '#results-card{min-height:260px}')
+          ),
+
+          showResult && React.createElement('section', { className: "px-4 md:px-6 pb-12 -mt-4 md:-mt-6" },
+            React.createElement('div', { className: "max-w-4xl mx-auto" },
+              React.createElement('div', {
+                id: 'results-card',
+                className: "p-5 md:p-8 rounded-3xl border backdrop-blur-xl transition-all duration-500",
+                style: {background: 'var(--surface)', boxShadow: 'var(--shadow)', borderColor: 'var(--border)', minHeight: '240px'}
+              },
+                (isLoading || (result && result.type === 'loading')) ? React.createElement(LoadingAnimation) :
+                (result && result.type === 'suggestion') ? React.createElement('div', { className: "text-center py-8 slide-fade-in" },
+                  result.songChanged && React.createElement('div', { className: "mb-4 text-sm", style: {color: 'var(--text-muted)'} },
+                    React.createElement('em', null, 'Corrected spelling: "' + result.originalSong + '" -> "' + result.correctedSong + '"')
+                  ),
+                  React.createElement('div', { className: "mb-6 text-lg leading-relaxed" }, result.message),
+                  React.createElement('button', {
+                    onClick: function() { handleSuggestionAccept(result.correctedSong, result.suggestedArtist); },
+                    className: "px-8 py-3 rounded-xl font-semibold transition-all duration-200 hover:transform hover:-translate-y-1",
+                    style: {
+                      background: 'linear-gradient(135deg, var(--primary), var(--primary-hover))',
+                      boxShadow: '0 8px 20px rgba(255, 107, 74, 0.3)'
+                    }
+                  }, 'Yes, search for "' + result.correctedSong + '" by ' + result.suggestedArtist)
+                ) : (result && result.type === 'meaning') ? React.createElement('div', { className: "slide-fade-in" },
+                  React.createElement('div', { className: "mb-6 pb-4 border-b", style: {borderColor: 'var(--border)'} },
+                    React.createElement('h2', { className: "text-2xl font-bold mb-2" },
+                      '"' + result.song + '" by ' + result.artist
+                    )
+                  ),
+                  createYouTubeEmbed(result.song, result.artist),
+                  React.createElement('div', { className: "mb-8" },
+                    React.createElement('div', {
+                      className: "text-base leading-relaxed whitespace-pre-wrap",
+                      style: { whiteSpace: 'pre-wrap' }
+                    }, result.meaning)
+                  ),
+                  React.createElement('div', { className: "text-center pt-4 border-t", style: {borderColor: 'var(--border)'} },
+                    React.createElement('button', {
+                      onClick: function() { shareResult(result.song, result.artist); },
+                      className: "inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:transform hover:-translate-y-1",
+                      style: {
+                        background: 'var(--surface-hover)',
+                        boxShadow: '0 8px 20px rgba(255, 107, 74, 0.2)'
+                      }
+                    },
+                      React.createElement('svg', { width: "18", height: "18", viewBox: "0 0 24 24", fill: "currentColor" },
+                        React.createElement('circle', { cx: "18", cy: "5", r: "3" }),
+                        React.createElement('circle', { cx: "6", cy: "12", r: "3" }),
+                        React.createElement('circle', { cx: "18", cy: "19", r: "3" }),
+                        React.createElement('line', { x1: "8.59", y1: "13.51", x2: "15.42", y2: "17.49", stroke: "currentColor", strokeWidth: "2" }),
+                        React.createElement('line', { x1: "15.41", y1: "6.51", x2: "8.59", y2: "10.49", stroke: "currentColor", strokeWidth: "2" })
+                      ),
+                      'Share'
+                    )
+                  )
+                ) : React.createElement('div', { className: "text-center py-8 slide-fade-in", style: {color: 'var(--text-muted)'} },
+                  (result && result.message) || 'Sorry, no songwriter meaning found. Try refining your search.'
+                )
+              )
+            )
+          )
+        )
+      );
+    }
+
+    ReactDOM.render(React.createElement(LyricLeak), document.getElementById('root'));
+
+    // YouTube Audio Player functionality with timeline controls
+    window.audioPlayers = {};
+    window.updateTimers = {};
+    window.currentPlayer = null;
+
+    function onYouTubeIframeAPIReady() {
+      console.log('YouTube IFrame API ready');
+    }
+
+    // Utility to format time
+    function formatTime(seconds) {
+      seconds = Math.max(0, Math.floor(seconds || 0));
+      var h = Math.floor(seconds / 3600);
+      var m = Math.floor((seconds % 3600) / 60);
+      var s = seconds % 60;
+      if (h > 0) return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+      return m + ':' + String(s).padStart(2,'0');
+    }
+
+    // YouTube Audio Player functionality with fresh searches
+    window.audioPlayers = {};
+    window.updateTimers = {};
+    window.currentPlayer = null;
+
+    function onYouTubeIframeAPIReady() {
+      console.log('YouTube IFrame API ready');
+    }
+
+    // Utility to format time
+    function formatTime(seconds) {
+      seconds = Math.max(0, Math.floor(seconds || 0));
+      var h = Math.floor(seconds / 3600);
+      var m = Math.floor((seconds % 3600) / 60);
+      var s = seconds % 60;
+      if (h > 0) return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+      return m + ':' + String(s).padStart(2,'0');
+    }
+
+    // Smart AI Agent with Tools for YouTube Search
+    function searchYouTubeForSong(query, callback) {
+      console.log('🤖 Smart AI Agent with tools searching for:', query);
+
+      // Try the full AI agent first, fallback to basic matching
+      var agentUrl = 'https://ur74xqz788.execute-api.us-east-1.amazonaws.com/prod/api/youtube-search?query=' +
+                    encodeURIComponent(query);
+
+      fetch(agentUrl)
+        .then(function(response) {
+          if (!response.ok) throw new Error('Agent request failed');
+          return response.json();
+        })
+        .then(function(result) {
+          console.log('🤖 AI Agent response:', result);
+
+          // Log all the agent's reasoning
+          if (result.logs) {
+            result.logs.forEach(function(log) {
+              console.log('🤖 Agent:', log);
+            });
+          }
+
+          if (result.success && result.videoId) {
+            console.log('✅ AI Agent verified match:', result.videoId, 'with', Math.round(result.confidence * 100) + '% confidence');
+            console.log('🧠 Agent reasoning:', result.reasoning);
+            console.log('🛠️ Tools used:', result.toolsUsed.join(', '));
+            callback(result.videoId);
+          } else {
+            console.log('❌ AI Agent could not verify match:', result.reasoning);
+            callback(null);
+          }
+        })
+        .catch(function(error) {
+          console.log('🚨 AI Agent not available:', error.message);
+          console.log('❌ No fallback - AI agent must do all the work');
+          callback(null);
+        });
+    }
+
+
+
+
+
+
+    // Update UI for a specific player
+    function updatePlayerUI(playerId) {
+      var player = window.audioPlayers[playerId];
+      if (!player || typeof player.getDuration !== 'function') return;
+
+      var cleanId = playerId.replace('audio-player-', '');
+      var dur = player.getDuration() || 0;
+      var cur = player.getCurrentTime() || 0;
+
+      var durationEl = document.getElementById('duration-' + cleanId);
+      var currentEl = document.getElementById('current-time-' + cleanId);
+      var seekEl = document.getElementById('seek-' + cleanId);
+
+      if (durationEl) durationEl.textContent = formatTime(dur);
+
+      // Only update current time and seek bar if user isn't dragging
+      var isSeeking = seekEl && seekEl.isSeeking && seekEl.isSeeking();
+      if (!isSeeking) {
+        if (currentEl) currentEl.textContent = formatTime(cur);
+        if (seekEl && dur > 0) {
+          var pct = Math.min(1000, Math.max(0, Math.round((cur / dur) * 1000)));
+          seekEl.value = String(pct);
+        }
+      }
+    }
+
+    // Helper function to update play/pause button icons
+    function updatePlayPauseButton(cleanId, isPlaying) {
+      var playIcon = document.getElementById('play-icon-' + cleanId);
+      var pauseIcon = document.getElementById('pause-icon-' + cleanId);
+
+      if (playIcon && pauseIcon) {
+        if (isPlaying) {
+          playIcon.style.display = 'none';
+          pauseIcon.style.display = 'block';
+        } else {
+          playIcon.style.display = 'block';
+          pauseIcon.style.display = 'none';
+        }
+      }
+    }
+
+    window.toggleAudioPlayer = function(playerId, btnId, searchQuery) {
+      var btn = document.getElementById(btnId);
+      var cleanId = playerId.replace('audio-player-', '');
+
+      // Stop any currently playing audio
+      if (window.currentPlayer && window.currentPlayer !== window.audioPlayers[playerId]) {
+        window.currentPlayer.pauseVideo();
+        if (window.updateTimers[window.currentPlayer.playerId]) {
+          clearInterval(window.updateTimers[window.currentPlayer.playerId]);
+        }
+        // Update the previous player's button
+        var prevCleanId = window.currentPlayer.playerId.replace('audio-player-', '');
+        updatePlayPauseButton(prevCleanId, false);
+      }
+
+      if (!window.audioPlayers[playerId]) {
+        // Create new player with fresh search
+        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;"><circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/><path d="M12 6v6l4-2-4-2z"/></svg>';
+        btn.disabled = true;
+
+        searchYouTubeForSong(searchQuery, function(videoId) {
+          if (!videoId) {
+            btn.innerHTML = '<svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>';
+            btn.disabled = true;
+            btn.title = 'Smart AI Agent with tools could not verify this song/artist combination';
+            console.log('🤖 Smart AI Agent: No verified video found for:', searchQuery);
+            return;
+          }
+
+          console.log('🤖 Smart AI Agent: Creating verified player for:', searchQuery, 'with video ID:', videoId);
+
+          window.audioPlayers[playerId] = new YT.Player(playerId, {
+            height: '0',
+            width: '0',
+            videoId: videoId,
+            playerVars: {
+              playsinline: 1,
+              autoplay: 0,
+              controls: 0,
+              modestbranding: 1,
+              rel: 0
+            },
+            events: {
+              'onReady': function(event) {
+                // Restore the play/pause button with proper icons
+                btn.innerHTML = '<svg id="play-icon-' + cleanId + '" viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white; display: block;"><path d="M8 5v14l11-7z"/></svg><svg id="pause-icon-' + cleanId + '" viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white; display: none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+                btn.disabled = false;
+                console.log('Player ready for:', searchQuery);
+
+                // Set up seek bar
+                var seekEl = document.getElementById('seek-' + cleanId);
+                if (seekEl) {
+                  var isSeeking = false;
+
+                  seekEl.addEventListener('mousedown', function() { isSeeking = true; });
+                  seekEl.addEventListener('touchstart', function() { isSeeking = true; }, { passive: true });
+
+                  seekEl.addEventListener('input', function(e) {
+                    var player = window.audioPlayers[playerId];
+                    var dur = player ? player.getDuration() : 0;
+                    if (dur > 0) {
+                      var pct = Number(e.target.value) / 1000;
+                      var t = dur * pct;
+                      var currentEl = document.getElementById('current-time-' + cleanId);
+                      if (currentEl) currentEl.textContent = formatTime(t);
+                    }
+                  });
+
+                  seekEl.addEventListener('change', function(e) {
+                    var player = window.audioPlayers[playerId];
+                    if (!player) return;
+                    var dur = player.getDuration();
+                    if (dur > 0) {
+                      var pct = Number(e.target.value) / 1000;
+                      var t = dur * pct;
+                      player.seekTo(t, true);
+                    }
+                    isSeeking = false;
+                  });
+
+                  seekEl.isSeeking = function() { return isSeeking; };
+                }
+
+                setTimeout(function() {
+                  updatePlayerUI(playerId);
+                  event.target.playVideo();
+                }, 200);
+              },
+              'onStateChange': function(event) {
+                if (event.data === YT.PlayerState.PLAYING) {
+                  updatePlayPauseButton(cleanId, true);
+                  window.currentPlayer = event.target;
+                  window.currentPlayer.playerId = playerId;
+
+                  if (window.updateTimers[playerId]) clearInterval(window.updateTimers[playerId]);
+                  window.updateTimers[playerId] = setInterval(function() {
+                    updatePlayerUI(playerId);
+                  }, 250);
+                } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+                  updatePlayPauseButton(cleanId, false);
+                  if (window.updateTimers[playerId]) {
+                    clearInterval(window.updateTimers[playerId]);
+                    window.updateTimers[playerId] = null;
+                  }
+                  updatePlayerUI(playerId);
+                }
+              },
+              'onError': function(event) {
+                console.log('Player error for:', searchQuery, event.data);
+                btn.innerHTML = '<svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
+                btn.disabled = false;
+              }
+            }
+          });
+        });
+      } else {
+        // Toggle existing player
+        var player = window.audioPlayers[playerId];
+        if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+          player.pauseVideo();
+        } else {
+          player.playVideo();
+        }
+      }
+    };
+
+    // Legacy function - now handled by toggleAudioPlayer
+    window.pauseAudioPlayer = function(playerId) {
+      var player = window.audioPlayers[playerId];
+      if (player) {
+        player.pauseVideo();
+      }
+    };
+
+
+
+
+
+    // Make sure API is loaded
+    if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+      window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+    } else {
+      onYouTubeIframeAPIReady();
+    }
+  </script>
+</body>
+</html>

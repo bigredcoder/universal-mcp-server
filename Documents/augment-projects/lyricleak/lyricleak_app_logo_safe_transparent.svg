@@ -1,0 +1,24 @@
+
+<svg width="640" height="640" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg">
+  <!-- Safe padding around edges -->
+  
+  <!-- Group scaled to 88% to avoid edge clipping on any font substitution -->
+  <g transform="translate(320,320) scale(0.88) translate(-320,-320)">
+    <!-- Wordmark -->
+    <text x="320" y="340" text-anchor="middle"
+          font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+          font-weight="800" font-size="132" fill="#ffffff">lyricleak</text>
+    <!-- EQ underline centered -->
+    <g transform="translate(160,400)">
+      <rect fill="#ff6b4a" rx="6" ry="6" x="0"   y="-24" width="20" height="24"/>
+      <rect fill="#ff6b4a" rx="6" ry="6" x="32"  y="-40" width="20" height="40"/>
+      <rect fill="#ff6b4a" rx="6" ry="6" x="64"  y="-56" width="20" height="56"/>
+      <rect fill="#ff6b4a" rx="6" ry="6" x="96"  y="-72" width="20" height="72"/>
+      <rect fill="#ff6b4a" rx="6" ry="6" x="128" y="-88" width="20" height="88"/>
+      <rect fill="#ff6b4a" rx="6" ry="6" x="160" y="-72" width="20" height="72"/>
+      <rect fill="#ff6b4a" rx="6" ry="6" x="192" y="-56" width="20" height="56"/>
+      <rect fill="#ff6b4a" rx="6" ry="6" x="224" y="-40" width="20" height="40"/>
+      <rect fill="#ff6b4a" rx="6" ry="6" x="256" y="-24" width="20" height="24"/>
+    </g>
+  </g>
+</svg>

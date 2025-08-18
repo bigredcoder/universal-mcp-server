@@ -1,0 +1,20 @@
+{
+  "name": "Lyric Leak",
+  "short_name": "Lyric Leak",
+  "description": "LyricLeak leaks the real stories and hidden meanings behind the music you love.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0b1024",
+  "background_color": "#0b1024",
+  "icons": [
+    { "src": "/lyricleak_eq_icon_centered_math_60.png?v=2", "sizes": "60x60", "type": "image/png", "purpose": "any" },
+    { "src": "/lyricleak_eq_icon_centered_math_76.png?v=2", "sizes": "76x76", "type": "image/png", "purpose": "any" },
+    { "src": "/lyricleak_eq_icon_centered_math_120.png?v=2", "sizes": "120x120", "type": "image/png", "purpose": "any" },
+    { "src": "/lyricleak_eq_icon_centered_math_152.png?v=2", "sizes": "152x152", "type": "image/png", "purpose": "any" },
+    { "src": "/lyricleak_eq_icon_centered_math_180.png?v=2", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/lyricleak_eq_icon_centered_math_512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
+
